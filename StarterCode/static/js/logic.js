@@ -29,7 +29,7 @@ let basemaps= {
 //generate map object
 var worldMap = L.map("map", {
     center: [35.6762, 139.6503],
-    zoom: 5,
+    zoom: 4,
     layers: [defaultView,greyscaleView, topoView]
 })
 
@@ -42,15 +42,39 @@ let tectPlates = new L.layerGroup();
 //generate layer for earthquake data
 let earthQuakes = new L.layerGroup();
 
+
 // add the overlay for tectPlates
 let overlays = {
-    "Tectonic Plates": tectPlates
+    "Tectonic Plates": tectPlates,
+    "Earthquake Data": earthQuakes
 }
 
 //add a layer control
 L.control
     .layers(basemaps, overlays)
     .addTo(worldMap);
+//add another layer control for the legend
+let legend = L.control({
+    position: "bottomright"
+});
+
+legend.onAdd = function(){
+    // add div for legend to appear
+    let div = L.DomUtil.create("div", "info legend");
+    let intervals = [-10,10,30,50,70,90];
+    let colors = ["green","#cafc03","#fcad03","#fc8403","red"];
+    //loop through intervales and generate label for each
+    for(var i = 0; i < intervals.length; i++)
+    {
+        // inner html that sets the square for the label
+        div.innerHTML += "<i style='background:"
+        +colors[i]
+        +"`></i>"
+        +intervals[i]
+        +(intervals[i+1] ? "km &ndash km;" + intervals[i+1] + "km<br>" : "+");
+    }
+    return div;
+};
 
 //call GeoJSON api
 d3.json("https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson")
@@ -81,20 +105,30 @@ d3.json("https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojs
         // create function to add style
         function dataStyle(feature){
             return {
-                opacity: 1,
-                fillOpacity: 1,
+                opacity: 0.5,
+                fillOpacity: 0.5,
                 fillColor: dataColor(feature.geometry.coordinates[2]), //index 2 is depth, 0 and 1 are lat and long
                 color: "000000",
                 radius: radiusSize(feature.properties.mag), 
-                weight: 0.5
+                weight: 0.5,
+                stroke: true
             }
         }
         //add GeoJson data to layer group
         L.geoJson(quakeData, {
             pointToLayer: function(feature, latLong){
                 return L.circleMarker(latLong);
+            },
+            //add style
+            style: dataStyle,
+            // add popups
+            onEachFeature: function(feature,layer){
+                layer.bindPopup(`Magnitude: <b>${feature.properties.mag}</b><br>
+                                Depth: <b>${feature.geometry.coordinates[2]}</b><br>
+                                Location: <b>${feature.properties.place}</b><br>`);
             }
         }).addTo(earthQuakes);
+
     })
 
 
@@ -110,4 +144,7 @@ d3.json("https://raw.githubusercontent.com/fraxen/tectonicplates/master/GeoJSON/
 
 // add tectPlates to map
 tectPlates.addTo(worldMap);
-
+//add earthquake layer to map
+earthQuakes.addTo(worldMap);
+//add legend to the map
+legend.addTo(worldMap);
