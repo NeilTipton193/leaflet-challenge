@@ -36,7 +36,78 @@ var worldMap = L.map("map", {
 // add map object to maps
 defaultView.addTo(worldMap);
 
+//generate layer for tectonic data
+let tectPlates = new L.layerGroup();
+
+//generate layer for earthquake data
+let earthQuakes = new L.layerGroup();
+
+// add the overlay for tectPlates
+let overlays = {
+    "Tectonic Plates": tectPlates
+}
+
 //add a layer control
 L.control
-    .layers(basemaps)
+    .layers(basemaps, overlays)
     .addTo(worldMap);
+
+//call GeoJSON api
+d3.json("https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson")
+    .then(function(quakeData){
+        //plot circles such that the radius depends on the earthquake magnitude, color depends on depth
+        //create function that chooses color based on depth
+        function dataColor(depth){
+            if (depth > 90)
+                return "red";
+            else if (depth > 70)
+                return "#fc4903";
+            else if (depth > 50)
+                return "#fc8403";
+            else if (depth > 30)
+                return "#fcad03";
+            else if (depth > 10)
+                return "#cafc03";
+            else
+                return "green";
+        }
+        //create function that determines radius size
+        function radiusSize(mag){
+            if (mag==0)
+                return 1;
+            else
+                return mag*4;
+        }
+        // create function to add style
+        function dataStyle(feature){
+            return {
+                opacity: 1,
+                fillOpacity: 1,
+                fillColor: dataColor(feature.geometry.coordinates[2]), //index 2 is depth, 0 and 1 are lat and long
+                color: "000000",
+                radius: radiusSize(feature.properties.mag), 
+                weight: 0.5
+            }
+        }
+        //add GeoJson data to layer group
+        L.geoJson(quakeData, {
+            pointToLayer: function(feature, latLong){
+                return L.circleMarker(latLong);
+            }
+        }).addTo(earthQuakes);
+    })
+
+
+//Call api using D3
+d3.json("https://raw.githubusercontent.com/fraxen/tectonicplates/master/GeoJSON/PB2002_boundaries.json")
+    .then(function(plotData){
+    L.geoJson(plotData,{
+        // add styling to make lines visible
+        color: "yellow",
+        weight: 1
+    }).addTo(tectPlates)
+    });
+
+// add tectPlates to map
+tectPlates.addTo(worldMap);
+
