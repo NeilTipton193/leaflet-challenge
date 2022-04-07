@@ -27,7 +27,7 @@ let basemaps= {
 }
 
 //generate map object
-var wMap = L.map("map", {
+var worldMap = L.map("map", {
     center: [35.6762, 139.6503],
     zoom: 5,
     layers: [defaultView,greyscaleView, topoView]
